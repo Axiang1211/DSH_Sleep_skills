@@ -1,0 +1,15 @@
+{
+  "enabled": false,
+  "sessionScopes": {},
+  "captureToolResults": false,
+  "recallBytes": 12000,
+  "sleepIntervalSeconds": 300,
+  "sleepAfterEvents": 100,
+  "mode": "model",
+  "model": {
+    "baseUrl": "http://127.0.0.1:1234/v1",
+    "model": "replace-with-your-loaded-model-id",
+    "allowRemote": false,
+    "timeoutMs": 60000
+  }
+}

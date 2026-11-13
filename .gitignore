@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.tgz
+*.sqlite*
+*.db*
+.env
+.env.*
+!.env.example
+config.local.json
+memory/
+coverage/
+__pycache__/

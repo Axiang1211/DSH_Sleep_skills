@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sleep Memory"
+  short_description: "Recall source-linked history beyond the current conversation"
+  default_prompt: "Use $sleep-memory to find and verify earlier decisions with their original sources."
