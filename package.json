@@ -1,0 +1,18 @@
+{
+  "name": "dsh-sleep-skills",
+  "version": "0.1.0-alpha.1",
+  "description": "Evidence-linked persistent memory and sleep consolidation for DSH agents. Research preview; no native context-window expansion.",
+  "type": "module",
+  "main": "src/dsh-plugin.mjs",
+  "exports": {".": "./src/dsh-plugin.mjs", "./memory": "./src/memory.mjs"},
+  "bin": {"dsh-sleep": "bin/sleep.mjs"},
+  "engines": {"node": ">=24.0.0"},
+  "scripts": {"test": "node --test", "benchmark": "node scripts/benchmark.mjs", "bundle": "python3 scripts/bundle.py"},
+  "files": ["src", "bin", "skills", "cordis.patch.yml", "README.md", "LICENSE", "docs", "examples"],
+  "dsh": {"bundle": {"patch": "./cordis.patch.yml"}},
+  "peerDependencies": {"@deepseek-ai/dsh-tools": "*", "@deepseek-ai/dsh-llm": "*"},
+  "peerDependenciesMeta": {"@deepseek-ai/dsh-tools": {"optional": true}, "@deepseek-ai/dsh-llm": {"optional": true}},
+  "keywords": ["dsh-plugin", "memory", "skills", "continual-learning"],
+  "repository": {"type": "git", "url": "https://github.com/Axiang1211/DSH_Sleep_skills.git"},
+  "license": "MIT"
+}

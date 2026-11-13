@@ -1,0 +1,16 @@
+{
+  "enabled": false,
+  "sessionScopes": {},
+  "captureToolResults": false,
+  "recallBytes": 12000,
+  "sleepIntervalSeconds": 300,
+  "sleepAfterEvents": 100,
+  "mode": "model",
+  "model": {
+    "baseUrl": "https://replace-with-your-provider.example/v1",
+    "model": "replace-with-your-model-id",
+    "apiKeyEnv": "DSH_SLEEP_API_KEY",
+    "allowRemote": true,
+    "timeoutMs": 60000
+  }
+}

@@ -1,0 +1,3 @@
+{"sourceKey":"demo:1","source":"demo://planning/1","kind":"user","createdAt":"2026-11-01T10:00:00Z","text":"測試專案 Aurora 的發佈色是紫色，內部代號是月光蜜瓜。"}
+{"sourceKey":"demo:2","source":"demo://planning/2","kind":"user","createdAt":"2026-11-02T10:00:00Z","text":"Aurora 測試專案更新：發佈色改為青色，取代昨天的紫色方案。"}
+{"sourceKey":"demo:3","source":"demo://planning/3","kind":"note","createdAt":"2026-11-03T10:00:00Z","text":"這是一份離線示範資料，不是使用者的真實歷史。Archive checkpoint checksum label: mint-lantern."}
