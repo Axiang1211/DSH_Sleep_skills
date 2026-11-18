@@ -18,6 +18,20 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm test
+  dsh-runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run test:dsh
   package:
     runs-on: ubuntu-latest
     steps:

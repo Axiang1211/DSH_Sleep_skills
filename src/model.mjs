@@ -3,6 +3,7 @@ import { requireText } from './text.mjs';
 const loopback = host => ['localhost', '127.0.0.1', '[::1]'].includes(host);
 export class ChatCompletionsModel {
   constructor({ baseUrl, model, apiKeyEnv = 'DSH_SLEEP_API_KEY', allowRemote = false, timeoutMs = 60000 }, fetchImpl = fetch) {
+    if(typeof allowRemote!=='boolean')throw new Error('allowRemote must be an explicit boolean');
     const url = new URL(baseUrl);
     if (url.username || url.password || url.search || url.hash) throw new Error('Endpoint must not contain credentials, query or fragment');
     if (!loopback(url.hostname) && (!allowRemote || url.protocol !== 'https:')) throw new Error('Remote consolidation requires allowRemote=true and HTTPS');
@@ -13,10 +14,10 @@ export class ChatCompletionsModel {
     this.url = new URL(baseUrl.replace(/\/$/, '') + '/chat/completions');
     this.model = model; this.apiKeyEnv = apiKeyEnv; this.timeoutMs = timeoutMs; this.fetch = fetchImpl;
   }
-  async propose(events) {
+  async propose(events,{signal}={}) {
     const key = process.env[this.apiKeyEnv];
     const response = await this.fetch(this.url, {
-      method: 'POST', redirect: 'error', signal: AbortSignal.timeout(this.timeoutMs),
+      method: 'POST', redirect: 'error', signal: AbortSignal.any([AbortSignal.timeout(this.timeoutMs),...(signal?[signal]:[])]),
       headers: { 'Content-Type': 'application/json', ...(key ? { Authorization: `Bearer ${key}` } : {}) },
       body: JSON.stringify({ model: this.model, temperature: 0, max_tokens: 3000,
         messages: [

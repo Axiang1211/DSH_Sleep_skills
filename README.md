@@ -28,11 +28,11 @@
 
 給 DeepSeek Harness（DSH）與個人代理使用的持久記憶預覽版。採 MIT 授權，可下載、自行安裝與修改。核心不需要 npm 相依套件或 API Key。
 
-> **v0.1.0-alpha.1：研究預覽版。** 這是受 SLEEP 啟發的外部記憶系統，不是論文的權重訓練實作，也不會把模型的原生上下文窗口改成無限大。DSH 接口有模擬合約測試，尚未在真實「大肥魚」帳號或 DSH runtime 完成端到端驗證。
+> **v0.1.0-alpha.2：研究預覽版。** 這是受 SLEEP 啟發的外部記憶系統，不是論文的權重訓練實作，也不會把模型的原生上下文窗口改成無限大。已用官方 DSH 0.2.2-rc.1 runtime 與腳本模型驗證訊息存檔、工具執行、跨 session 回憶及插件卸載；尚未在真實「大肥魚」帳號、桌面啟動器或真實模型端點驗證。
 
 ## 下載與安裝
 
-1. 安裝 [Node.js 24 LTS](https://nodejs.org/)（最低 24.0）。目前沒有內含 Node 的 exe / dmg。
+1. 安裝 [Node.js 24 LTS](https://nodejs.org/)（核心最低 24.0；DSH 整合需要 24.9 以上）。目前沒有內含 Node 的 exe / dmg。
 2. 從 [Releases](https://github.com/Axiang1211/DSH_Sleep_skills/releases) 下載版本 ZIP，或直接下載 [main 原始碼 ZIP](https://github.com/Axiang1211/DSH_Sleep_skills/archive/refs/heads/main.zip)，解壓縮。
 3. Windows 雙擊 `Install.cmd`。macOS / Linux 在解壓縮目錄執行：
 
@@ -65,7 +65,7 @@ node bin/sleep.mjs status demo
 | --- | --- | --- |
 | 核心 / CLI | 可執行，有自動測試 | 本地存檔、中文與英文關鍵字搜尋、引用、忘記資料 |
 | Skills Lite | 附帶 skill 與唯讀 helper | 讓支援 Skills 且能執行本地命令的代理按流程查記憶；不會單靠 markdown 自動擷取對話 |
-| DSH 插件 | 接口預覽，實機待驗證 | 指定 session 的新訊息存檔、回答前回憶、背景 Sleep |
+| DSH 插件 | 官方 runtime 整合測試通過，帳號實機待驗證 | 指定 session 的新訊息存檔、回答前回憶、背景 Sleep |
 | API 模型整理 | 已實作，端點用 mock 測試 | 呼叫相容 Chat Completions 的端點產生待審核摘要 |
 | 本地模型整理 | 與 API 共用協定，實機待驗證 | 連到本機推理伺服器，不要求模型權重可訓練 |
 | 權重訓練研究版 | **未實作** | 未來評估 LoRA / MoE 與遺忘測試；不宣稱重現論文 |
@@ -82,21 +82,21 @@ node bin/sleep.mjs status demo
 
    `desktop` 只是範例；換成實際 profile。這一步需 DSH 主程式已安裝，且可解析 `@deepseek-ai/dsh-tools`、`@deepseek-ai/dsh-llm`。若出現模組找不到或 hook 不相容，先停用插件，不要停用 DSH 的原生壓縮。
 
-2. 編輯 `~/.dsh-sleep/config.json`，用**實際 session ID**建立明確映射：
+2. 用**實際 session ID**建立明確映射，再啟用。以下命令在原始碼目錄執行；使用安裝版時，把 `bin/sleep.mjs` 換成安裝器輸出的完整路徑：
 
-   ```json
-   {
-     "enabled": true,
-     "sessionScopes": { "your-private-session-id": "owner-personal" },
-     "mode": "extractive",
-     "captureToolResults": false,
-     "recallBytes": 12000,
-     "sleepIntervalSeconds": 300,
-     "sleepAfterEvents": 100
-   }
+   ```sh
+   node bin/sleep.mjs config bind your-private-session-id owner-personal
+   node bin/sleep.mjs config enable
+   node bin/sleep.mjs doctor
    ```
 
+   預設本機摘錄模式、回憶上限 12,000 UTF-8 bytes、每 300 秒檢查一次，累積 100 筆未整理事件後執行 Sleep。工具結果預設不存檔；需要時在 `~/.dsh-sleep/config.json` 設定 `captureToolResults: true`。設定命令保留其他選項，修改前備份原設定；`bind` 本身不切換啟用狀態，已啟用時新增映射會於重新載入後生效。
+
+   `config unbind <session-id>` 移除映射，`config disable` 停止記錄；都保留既有記憶，重新載入 profile 才生效。移除最後一個映射會自動停用。
+
 3. 重新載入 DSH profile，確認 `sleep_search`、`sleep_read`、`sleep_status` 工具出現。用不含個資的測試訊息驗證 `status owner-personal` 數量增加、換一個映射到同 scope 的測試 session 能找到原始來源。未映射的 session 不記錄、不可透過這些工具查詢。
+
+`doctor --dsh` 另檢查可見的 DSH 工具與訊息工廠，不呼叫模型。獨立終端可能看不到由 DSH host 解析的 peer modules；這種結果不等於 profile 內一定載入失敗。`sleep_status` 可查看各 scope 的存檔、回憶與整理失敗次數，以及上次整理時間（計數在插件重新載入後重設）。
 
 **大肥魚場景的重要限制：** 此版的隔離單位是 session → scope，不是聯絡人。如果微信、Discord、B 站等所有人共用同一個 whale session，插件無法憑空分辨收件人權限。先用只有你的小號／私人測試 session；公開或多人回覆須先加入可靠的聯絡人／頻道隔離適配器。不要把私人記憶 scope 掛到會替陌生人回覆的共用 session。
 
@@ -117,7 +117,7 @@ node bin/sleep.mjs memories owner-personal candidate
 node bin/sleep.mjs review owner-personal m_實際ID accept
 ```
 
-檢查摘要與 quote 是否相符後才接受；用 `reject` 拒絕。精確引文只能證明文字存在，不能證明摘要正確。候選摘要不會被注入回答。原始資料始終可搜尋，模型失敗不會刪除來源。每次 `sleep` 最多處理 20 筆、約 96 KB 序列化來源；被模型略過的事件保留待整理。背景排程在 DSH 執行期間每次最多一批，低於門檻的尾批可手動處理。
+檢查摘要與 quote 是否相符後才接受；用 `reject` 拒絕。精確引文只能證明文字存在，不能證明摘要正確。候選與拒絕的摘要不參與搜尋或注入；接受後，摘要中的新關鍵字也能找回對應原文。原始資料始終可搜尋，模型失敗不會刪除來源。每次 `sleep` 最多處理 20 筆，來源預算由 `sleepMaxBytes` 控制（預設 96,000 bytes、可設 65,536～1,000,000）。單筆序列化後超出預算會明確報錯，調高預算後可重試；被模型略過的事件保留待整理。背景排程在 DSH 執行期間每次最多一批，低於門檻的尾批可手動處理。
 
 ## 記憶管理
 
@@ -129,13 +129,13 @@ node bin/sleep.mjs review owner-personal m_實際ID accept
 - 刪除不會抹除 DSH 原始日誌、已注入上下文、磁碟快照或外部備份；不是磁碟鑑識等級安全抹除。資料庫未加密，依賴你的 OS 帳號／磁碟保護。
 - `scope` 是應用層的查詢隔離，不能抵擋已能執行任意 shell、讀檔的代理。共用不受信任主機需另做 OS / 容器隔離。
 
-更新：關閉使用此插件的 DSH profile，從新解壓縮目錄重跑安裝器；設定和 DB 保留。移除：先用你的 DSH 版本提供的插件管理命令移除 bundle，再刪除此專案擁有的 skill 與 `~/.dsh-sleep/app`。是否刪除 `memory.sqlite` 與設定由你決定。
+更新至 alpha.2：關閉使用此插件的 DSH profile 與 CLI，先備份整個 `DSH_SLEEP_HOME`（預設 `~/.dsh-sleep`，包含 SQLite 的 `-wal` / `-shm` 檔案，如果存在），再從新解壓縮目錄重跑安裝器。設定和 DB 保留；首次開啟會把資料庫升級到 schema 2，建立摘要索引。alpha.1 無法讀取升級後的 DB；回退時需還原升級前的完整備份。移除：先用你的 DSH 版本提供的插件管理命令移除 bundle，再刪除此專案擁有的 skill 與 `~/.dsh-sleep/app`。是否刪除 `memory.sqlite` 與設定由你決定。
 
 ## 原理與限制
 
-記錄原始事件 → 中文／英文詞彙索引 → 按需查回 → 固定大小的上下文證據區塊。Sleep 另外建立有來源的摘要／摘錄，模型摘要經人工接受後可隨匹配來源附帶回憶。
+記錄原始事件 → 中文／英文詞彙索引 → 按需查回 → 固定大小的上下文證據區塊。Sleep 另外建立有來源的摘要／摘錄，模型摘要經人工接受後，會與原文分別搜尋，再合併排序、帶回可追溯來源。
 
-這解決「歷史超出目前窗口後仍有地方找」，不保證每次都找到，也不讓模型一次推理整個資料庫。此版尚無向量檢索、重排序、跨來源自動衝突解決、tokenizer 精算、訓練或 Dreaming。回憶大小以 **UTF-8 bytes** 限制，保留 DSH 原生 token 計量與壓縮。摘要搜尋仍依賴原始事件的詞彙命中。
+這解決「歷史超出目前窗口後仍有地方找」，不保證每次都找到，也不讓模型一次推理整個資料庫。此版尚無向量檢索、重排序、跨來源自動衝突解決、tokenizer 精算、訓練或 Dreaming。回憶大小以 **UTF-8 bytes** 限制，保留 DSH 原生 token 計量與壓縮。長篇來源會按剩餘預算截短並保留事件 ID，供代理用 `sleep_read` 查完整內容；摘要可增加詞彙命中的機會，但不是語意向量搜尋。
 
 論文研究的是模型參數內的記憶鞏固與 Dreaming；本專案是工程上的外部記憶改編。閱讀 [研究對照與後續路線](docs/research.md)。
 
@@ -145,8 +145,12 @@ node bin/sleep.mjs review owner-personal m_實際ID accept
 npm test
 npm run benchmark
 python3 scripts/bundle.py
+
+# 官方 DSH runtime 整合測試，使用 Node 24.9+
+npm ci --ignore-scripts
+npm run test:dsh
 ```
 
-測試不需要 DSH、聊天帳號或 API 金鑰。Benchmark 使用合成資料，回報位元組、空白分隔詞數及來源命中；**不是論文的 BABILong、不是經模型 tokenizer 驗證的百萬 token 評測，也不是模型回答正確率**。跨平台 CI 與 tag release workflow 已提供；實際通過結果以 Actions 為準。
+`npm test` 不需要安裝 DSH；`test:dsh` 使用 lockfile 鎖定的官方 runtime 套件與腳本模型，驗證真實事件、工具執行、重載後回憶、scope 隔離及卸載，無需聊天帳號或 API 金鑰。兩組測試都有 Windows／macOS／Linux CI。Benchmark 使用合成資料，回報位元組、空白分隔詞數及來源命中；**不是論文的 BABILong、不是經模型 tokenizer 驗證的百萬 token 評測，也不是模型回答正確率**。跨平台 CI 與 tag release workflow 已提供；實際通過結果以 Actions 為準。
 
 程式授權：[MIT](LICENSE)。研究引用：[Google Research](https://research.google/blog/the-sleep-framework-a-new-way-for-llms-to-retain-knowledge-in-continual-learning/) · [Language Models Need Sleep](https://arxiv.org/abs/2606.03979) · [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)。本專案與 Google / DeepSeek 無官方隸屬關係。

@@ -21,3 +21,13 @@ test('HTTP failures and oversized / malformed responses fail closed',async()=>{
     await assert.rejects(client.propose([]),error=>!error.message.includes('provider-secret'));
   }
 });
+test('remote opt-in must be boolean and caller cancellation reaches fetch',async()=>{
+  for(const allowRemote of ['false','true',1])assert.throws(()=>new ChatCompletionsModel({...config,allowRemote}),/boolean/);
+  const controller=new AbortController();let requestSignal;
+  const client=new ChatCompletionsModel(config,async(_url,{signal})=>{
+    requestSignal=signal;
+    return new Promise((_resolve,reject)=>signal.addEventListener('abort',()=>reject(signal.reason),{once:true}));
+  });
+  const running=client.propose([],{signal:controller.signal});controller.abort();
+  await assert.rejects(running);assert.equal(requestSignal.aborted,true);
+});
