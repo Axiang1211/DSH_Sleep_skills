@@ -41,3 +41,19 @@ test('installer refuses to overwrite an unrelated skill before installing app',t
   assert.equal(readFileSync(join(skill,'SKILL.md'),'utf8'),'user custom content');
   assert.equal(existsSync(join(home,'app')),false);
 });
+test('configuration commands require a mapping, retain model settings and back up prior contents',t=>{
+  const {cli,run,home}=setup(t);cli('init');
+  assert.equal(run('bin/sleep.mjs',['config','enable']).status,1);
+  const file=join(home,'config.json');const previous={enabled:false,mode:'extractive',recallBytes:4096,sessionScopes:{}};
+  writeFileSync(file,JSON.stringify(previous));
+  const bound=cli('config','bind','my-session','owner');assert.equal(bound.enabled,false);
+  assert.deepEqual(JSON.parse(readFileSync(bound.backup,'utf8')),previous);
+  assert.equal(JSON.parse(readFileSync(file,'utf8')).recallBytes,4096);
+  assert.equal(cli('config','enable').enabled,true);
+  assert.equal(cli('doctor').mappedSessions[0],'my-session');
+  assert.equal(cli('config','unbind','my-session').enabled,false);
+  assert.equal(run('bin/sleep.mjs',['config','bind','../bad','owner']).status,1);
+  writeFileSync(file+'.lock','other editor');
+  assert.equal(run('bin/sleep.mjs',['config','disable']).status,1);
+  assert.equal(existsSync(file+'.lock'),true);
+});

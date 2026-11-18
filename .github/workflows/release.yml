@@ -18,6 +18,8 @@ jobs:
       - name: Verify version matches tag
         run: node -e 'if ("v" + JSON.parse(require("fs").readFileSync("package.json")).version !== process.env.GITHUB_REF_NAME) process.exit(1)'
       - run: npm test
+      - run: npm ci --ignore-scripts
+      - run: npm run test:dsh
       - run: npm run benchmark
       - run: python3 scripts/bundle.py
       - run: npm pack --pack-destination dist

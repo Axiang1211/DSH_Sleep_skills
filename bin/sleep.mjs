@@ -6,11 +6,16 @@ import { MemoryStore } from '../src/memory.mjs';
 import { configFile, homeDir, loadConfig, validateConfig } from '../src/config.mjs';
 import { sleepCycle } from '../src/sleep.mjs';
 import { ChatCompletionsModel } from '../src/model.mjs';
+import { editConfig } from '../src/config-editor.mjs';
+import { loadDshApi } from '../src/dsh-api.mjs';
 
 const help = `DSH Sleep — persistent evidence, not a larger native context window
 Usage: dsh-sleep <command> [arguments]
   init                              Create disabled config; keep existing config
-  doctor                            Check Node, SQLite and configuration
+  doctor [--dsh]                    Check storage/config; optionally check DSH module APIs
+  config bind <session-id> <scope>   Save an exact session mapping (does not enable recording)
+  config unbind <session-id>         Remove a mapping; retain stored memory
+  config enable|disable             Enable mapped sessions or disable recording
   ingest <scope> <events.jsonl|->     Import JSONL (sourceKey, source, text, kind?)
   search <scope> <query>             Return matching historical events
   context <scope> <query>            Build a bounded evidence block
@@ -28,6 +33,7 @@ async function main(args) {
   const [cmd,scope,...rest]=args;
   if (!cmd || ['help','--help','-h'].includes(cmd)) { console.log(help); return; }
   if (cmd==='install') { const { install }=await import('./install.mjs'); out(install()); return; }
+  if (cmd==='config') { out(editConfig(scope,rest));return; }
   if (cmd==='init') {
     const file=configFile();mkdirSync(dirname(file),{recursive:true,mode:0o700});
     if (!existsSync(file)) writeFileSync(file,JSON.stringify(validateConfig(),null,2)+'\n',{mode:0o600,flag:'wx'});
@@ -40,10 +46,17 @@ async function main(args) {
   try {
     switch(cmd) {
       case 'doctor': {
+        if(scope!==undefined&&scope!=='--dsh'||rest.length)throw new Error('Usage: doctor [--dsh]');
         const config=loadConfig();
-        if(config.mode==='model') new ChatCompletionsModel(config.model);
+        let dshRuntime={status:'not checked'};
+        if(scope==='--dsh')try{await loadDshApi();dshRuntime={status:'tool/message APIs ready',fullRuntime:'not checked'};}
+        catch(error){dshRuntime={status:'unavailable',reason:error.message};process.exitCode=1;}
+        const warnings=[];
+        if(!config.enabled)warnings.push('Recording is disabled');
+        if(!Object.keys(config.sessionScopes).length)warnings.push('No session IDs are mapped');
+        if(config.mode==='model'&&config.model.allowRemote)warnings.push('Sleep sends selected evidence to a remote model endpoint');
         out({node:process.version,sqlite:'ready',config:configFile(),mode:config.mode,enabled:config.enabled,
-          mappedSessions:Object.keys(config.sessionScopes),dshRuntime:'not checked',modelEndpoint:'not contacted'});break;
+          mappedSessions:Object.keys(config.sessionScopes),dshRuntime,modelEndpoint:'not contacted',warnings});break;
       }
       case 'ingest': {
         const file=rest[0];if(!file)throw new Error('JSONL file or - is required');
@@ -67,7 +80,7 @@ async function main(args) {
       case 'memories': out(store.memories(scope,rest[0]??'active'));break;
       case 'sleep': {
         const config=loadConfig();const model=config.mode==='model'?new ChatCompletionsModel(config.model):undefined;
-        out(await sleepCycle(store,scope,{model}));break;
+        out(await sleepCycle(store,scope,{model,maxBytes:config.sleepMaxBytes}));break;
       }
       case 'review':
         if(!['accept','reject'].includes(rest[1]))throw new Error('Specify accept or reject');
