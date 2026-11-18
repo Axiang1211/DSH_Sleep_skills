@@ -20,6 +20,7 @@ jobs:
       - run: npm test
       - run: npm ci --ignore-scripts
       - run: npm run test:dsh
+      - run: npm run benchmark:window
       - run: npm run benchmark
       - run: python3 scripts/bundle.py
       - run: npm pack --pack-destination dist
