@@ -31,6 +31,7 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci --ignore-scripts
+      - run: npm run test:compaction
       - run: npm run test:dsh
       - run: npm run benchmark:window
   package:

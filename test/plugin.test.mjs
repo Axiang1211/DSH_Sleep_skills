@@ -102,3 +102,16 @@ test('plugin disposal aborts pending model work and leaves sources unconsolidate
   const running=plugin.runSleep();cleanup.forEach(fn=>fn());assert.equal(requestSignal.aborted,true);
   finish();await running;assert.equal(store.stats('owner').pending,1);assert.equal(store.stats('owner').candidates,0);
 });
+
+test('compaction status is session-local, ignores duplicate delivery and clears on disposal', async t => {
+  const { handlers, tools } = setup(t);
+  const emit = (id, seq, data) => handlers['session/event']({ id }, { type: 'compaction/end', seq, data });
+  const status = async id => (await tools.get('sleep_status').execute({}, { agent: { id } })).sessionCompaction;
+  emit('private', 5, {});
+  emit('private', 7, { error: 'fixture failure' });
+  emit('private', 7, { error: 'fixture failure' });
+  assert.deepEqual(await status('private'), { completed: 1, failed: 1, lastEndSeq: 7 });
+  assert.deepEqual(await status('second'), { completed: 0, failed: 0, lastEndSeq: null });
+  handlers['session/disposed']({ id: 'private' });
+  assert.deepEqual(await status('private'), await status('second'));
+});

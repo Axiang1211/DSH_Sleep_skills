@@ -19,6 +19,7 @@ jobs:
         run: node -e 'if ("v" + JSON.parse(require("fs").readFileSync("package.json")).version !== process.env.GITHUB_REF_NAME) process.exit(1)'
       - run: npm test
       - run: npm ci --ignore-scripts
+      - run: npm run test:compaction
       - run: npm run test:dsh
       - run: npm run benchmark:window
       - run: npm run benchmark
