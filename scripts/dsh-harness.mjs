@@ -15,7 +15,7 @@ import { loadDshApi } from '../src/dsh-api.mjs';
 class ScriptedModel extends LlmAdapter {
   requests=[];
   nextTool=null;
-  async resolveModel(provider,model){return {provider,id:model,name:model};}
+  async resolveModel(provider,model){return {provider,id:model,name:model,context:{contextWindow:8192}};}
   async *stream(options){
     this.requests.push(options);
     if(this.nextTool){

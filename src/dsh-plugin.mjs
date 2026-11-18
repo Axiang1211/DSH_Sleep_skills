@@ -26,6 +26,7 @@ export function bindPlugin(ctx, rawConfig, { defineTool, createUserMessage, stor
   const scopeFor = id => typeof id === 'string' && Object.hasOwn(config.sessionScopes, id) ? config.sessionScopes[id] : undefined;
   let disposed = false, sleeping = false;
   const lastRecall = new Map(), pendingTools=new Map();
+  const compactions = new Map();
   const shutdown=new AbortController();
   const health=new Map();
   const healthFor=scope=>{if(!health.has(scope))health.set(scope,{archiveFailures:0,recallFailures:0,sleepFailures:0,lastSleep:null});return health.get(scope);};
@@ -38,7 +39,7 @@ export function bindPlugin(ctx, rawConfig, { defineTool, createUserMessage, stor
   function register(name, description, parameters, run) {
     const tool = defineTool({ name, description, parameters,
       output: { schema: { type: 'object', additionalProperties: true }, render: (_args,value) => [{ type: 'text', text: JSON.stringify(value) }] },
-      execute: async (args, exec) => { exec.signal?.throwIfAborted(); return run(requireScope(exec), args); }
+      execute: async (args, exec) => { exec.signal?.throwIfAborted(); return run(requireScope(exec), args, exec.agent.id); }
     });
     toolDefinitions.push(tool); ctx.tools.register(tool); return tool;
   }
@@ -46,13 +47,28 @@ export function bindPlugin(ctx, rawConfig, { defineTool, createUserMessage, stor
     { query: { type: 'string', required: true } }, (scope,args) => store.context(scope,args.query,{ maxBytes:config.recallBytes }));
   register('sleep_read', 'Read a cited historical event. Use nextOffset to continue. This does not prove the old content is still correct.',
     { id: { type:'string',required:true }, offset:{ type:'integer' } }, (scope,args) => ({ event:store.read(scope,args.id,{offset:args.offset??0}) }));
-  register('sleep_status', 'Show counts and pending consolidation for this scope.', {}, scope => ({...store.stats(scope),health:healthFor(scope)}));
+  register('sleep_status', 'Show scope memory health and native compaction observed in this session.', {},
+    (scope, _args, sessionId) => ({
+      ...store.stats(scope), health: healthFor(scope),
+      sessionCompaction: compactions.get(sessionId) ?? { completed: 0, failed: 0, lastEndSeq: null }
+    }));
   // No model-facing tools to approve summaries, choose another scope, forget history or alter permissions.
   ctx.on('session/event', (session,event) => {
     if (disposed) return;
     const scope = scopeFor(session.id);
     if (!scope || !Number.isSafeInteger(event.seq)) return;
     const data=event.data;
+    if (event.type === 'compaction/end') {
+      const previous = compactions.get(session.id) ?? { completed: 0, failed: 0 };
+      if (previous.lastEndSeq >= event.seq) return;
+      const failed = data?.error !== undefined;
+      compactions.set(session.id, {
+        completed: previous.completed + Number(!failed),
+        failed: previous.failed + Number(failed),
+        lastEndSeq: event.seq
+      });
+      return;
+    }
     if(event.type==='user/message'&&data?.source?.kind==='dsh-sleep-memory'){
       if(typeof data.source.queryIdentity==='string')lastRecall.set(session.id,data.source.queryIdentity);
       return;
@@ -102,7 +118,7 @@ export function bindPlugin(ctx, rawConfig, { defineTool, createUserMessage, stor
       content:[{type:'text',text:recall.text}],source:{kind:'dsh-sleep-memory',form:'context',queryIdentity:identity}
     })]};
   });
-  ctx.on('session/disposed',session=>{lastRecall.delete(session.id);pendingTools.delete(session.id);});
+  ctx.on('session/disposed',session=>{lastRecall.delete(session.id);pendingTools.delete(session.id);compactions.delete(session.id);});
   async function runSleep() {
     if (disposed || sleeping) return;
     sleeping=true;
@@ -121,7 +137,7 @@ export function bindPlugin(ctx, rawConfig, { defineTool, createUserMessage, stor
   }
   const timer=schedule?setInterval(runSleep,config.sleepIntervalSeconds*1000):undefined;
   timer?.unref();
-  ctx.effect(()=>()=>{if(disposed)return;disposed=true;shutdown.abort();clearInterval(timer);lastRecall.clear();pendingTools.clear();if(!sleeping&&!suppliedStore)store.close();});
+  ctx.effect(()=>()=>{if(disposed)return;disposed=true;shutdown.abort();clearInterval(timer);lastRecall.clear();pendingTools.clear();compactions.clear();if(!sleeping&&!suppliedStore)store.close();});
   return {store,runSleep,scopeFor,toolDefinitions,healthFor};
 }
 

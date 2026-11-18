@@ -23,6 +23,7 @@
 | API client | 假 HTTP 回應與取消訊號 | 格式、錯誤、輸出上限、來源驗證及取消傳遞 |
 | DSH adapter | 模擬 hook 與錯誤注入 | 儲存失敗、重試、可見性、設定邊界及卸載期間的寫入保護 |
 | 官方 DSH runtime | `npm run test:dsh`，腳本模型 | 真實 agent loop、session 事件、native 工具執行、重新載入後跨 session 回憶、scope 隔離與工具卸載 |
+| DSH 自動壓縮 | `npm run test:compaction`，官方 token meter 與 basic compaction，腳本模型 | 同一個 agent 在壓力門檻觸發壓縮、取得摘要後，仍能透過記憶讀回摘要遺漏的原始代號與事件 ID |
 | 桌面 / profile 啟動與真實大肥魚帳號 | 尚未執行 | 不宣稱完整產品環境端到端相容 |
 | 本地模型 / 雲端供應商 | 尚未呼叫 | 不宣稱摘要品質或模型供應商相容性 |
 

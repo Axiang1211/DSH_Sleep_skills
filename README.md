@@ -28,7 +28,7 @@
 
 給 DeepSeek Harness（DSH）與個人代理使用的持久記憶預覽版。採 MIT 授權，可下載、自行安裝與修改。核心不需要 npm 相依套件或 API Key。
 
-> **v0.1.0-alpha.3：研究預覽版。** 這是受 SLEEP 啟發的外部記憶系統，不是論文的權重訓練實作，也不會把模型的原生上下文窗口改成無限大。已用官方 DSH 0.2.2-rc.1 runtime 與腳本模型驗證訊息存檔、工具執行、跨 session 回憶及插件卸載；尚未在真實「大肥魚」帳號、桌面啟動器或真實模型端點驗證。
+> **v0.1.0-alpha.4：研究預覽版。** 這是受 SLEEP 啟發的外部記憶系統，不是論文的權重訓練實作，也不會把模型的原生上下文窗口改成無限大。已用官方 DSH 0.2.2-rc.1 runtime 與腳本模型驗證訊息存檔、工具執行、跨 session 回憶及插件卸載；尚未在真實「大肥魚」帳號、桌面啟動器或真實模型端點驗證。
 
 ## 下載與安裝
 
@@ -149,6 +149,7 @@ python3 scripts/bundle.py
 # 官方 DSH runtime 整合測試，使用 Node 24.9+
 npm ci --ignore-scripts
 npm run test:dsh
+npm run test:compaction
 npm run benchmark:window
 ```
 
@@ -156,6 +157,10 @@ npm run benchmark:window
 
 **百萬 token 歷史回憶驗收**　從下載的原始碼目錄執行 `npm ci --ignore-scripts` 與 `npm run benchmark:window`。指令會建立暫存資料庫，透過官方 DSH runtime 寫入四筆中英文決定，穿插 1,024 筆帶有相同專案名稱的合成紀錄，再關閉並重開 runtime 和 SQLite。在全新 session 中，腳本檢查送往模型的回憶是否同時含有正確答案片段與原始事件 ID，每題上限 384 UTF-8 bytes。輸出逐題列出命中與位元組數，並檢查另一個 scope 及無命中的查詢。
 
-填充紀錄按 `cl100k_base` 逐筆計數，共 1,063,168 tokens。這是可重跑的參考編碼。DSH 實際用量取決於所選模型。此驗收衡量四個有關鍵字線索的問題在重開後取得的證據，模型使用腳本回覆；真實模型的答題品質與 DSH 自動壓縮仍待實測。
+填充紀錄按 `cl100k_base` 逐筆計數，共 1,063,168 tokens。這是可重跑的參考編碼。DSH 實際用量取決於所選模型。此驗收衡量四個有關鍵字線索的問題在重開後取得的證據，模型使用腳本回覆；真實模型的答題品質仍待實測。
+
+**同一個 session 壓縮後還記得嗎？**　`npm run test:compaction` 讓官方 DSH 的 token meter 和自動壓縮插件在 8,192-token 測試窗口的 50% 門檻觸發。腳本模型產生省略驗收代號的摘要，再由同一個 agent 接收追問。測試檢查有效對話裡已出現 DSH 壓縮摘要，並驗證送到模型的 512-byte 回憶區塊帶回原始代號與事件 ID。
+
+在自己的 DSH 對話呼叫 `sleep_status`，查看 `sessionCompaction.completed`、`failed` 和 `lastEndSeq`，可知道插件在這個 session 觀察到幾次壓縮成功或失敗，以及最近一次結束事件的序號。兩個 session 即使共用記憶也各自計數；session 釋放或插件重載後重新開始計數。
 
 程式授權：[MIT](LICENSE)。研究引用：[Google Research](https://research.google/blog/the-sleep-framework-a-new-way-for-llms-to-retain-knowledge-in-continual-learning/) · [Language Models Need Sleep](https://arxiv.org/abs/2606.03979) · [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)。本專案與 Google / DeepSeek 無官方隸屬關係。
