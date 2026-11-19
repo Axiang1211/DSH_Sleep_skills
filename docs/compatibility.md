@@ -24,10 +24,13 @@
 | DSH adapter | 模擬 hook 與錯誤注入 | 儲存失敗、重試、可見性、設定邊界及卸載期間的寫入保護 |
 | 官方 DSH runtime | `npm run test:dsh`，腳本模型 | 真實 agent loop、session 事件、native 工具執行、重新載入後跨 session 回憶、scope 隔離與工具卸載 |
 | DSH 自動壓縮 | `npm run test:compaction`，官方 token meter 與 basic compaction，腳本模型 | 同一個 agent 在壓力門檻觸發壓縮、取得摘要後，仍能透過記憶讀回摘要遺漏的原始代號與事件 ID |
-| 桌面 / profile 啟動與真實大肥魚帳號 | 尚未執行 | 不宣稱完整產品環境端到端相容 |
-| 本地模型 / 雲端供應商 | 尚未呼叫 | 不宣稱摘要品質或模型供應商相容性 |
+| 官方 CLI profile | DSH 0.2.2-rc.1 的隔離 profile、link 安裝與啟動 | 公開插件入口載入後，agent 可用 sleep_status |
+| 桌面 / 真實大肥魚帳號 | 尚未執行 | 帳號環境需自行驗收 |
+| 本地模型 | llama.cpp b6000、Qwen2.5-0.5B-Instruct Q4_K_M，verify --model | 用合成回憶答對隨機六位數代號；雲端供應商與摘要品質需另外評估 |
 
 整合測試使用實際的 Cordis、LlmRuntime、SessionStore、AgentLoop、ToolRuntime 與 NativeToolExecutor；模型只產生預定文字及工具呼叫。這能發現真實事件欄位或工具 DSL 不相容，無法評估模型是否懂得使用記憶。測試會重新建立 runtime，保留同一份記憶存放區，確認新 session 能取回舊來源；SQLite 檔案重開與遷移另由核心測試涵蓋。
+
+beta.1 在 Linux 實測了安裝後的公開插件入口。官方 DSH CLI 0.2.2-rc.1 將安裝目錄以 `link:` 加入隔離的 profile。測試驅動器建立兩個對應同一個新 scope 的 session，兩次獨立啟動 DSH。第一次送入合成的專案名稱和隨機六位數，第二次只問專案代號。官方 pi-ai adapter 透過本機 llama.cpp b6000（Qwen2.5-0.5B-Instruct Q4_K_M）取得正確答案。這次單題實驗停用了無關工具以適應小模型，記憶模式為本機摘錄。早期測試中該模型曾漏抄英數混合碼；檢索命中與最終回答正確率須分別評估。使用者可在自己的兩個私人 session 重複這個流程，或用 `verify --model` 個別檢查端點。
 
 ## 套件與診斷
 

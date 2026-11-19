@@ -57,3 +57,17 @@ test('configuration commands require a mapping, retain model settings and back u
   assert.equal(run('bin/sleep.mjs',['config','disable']).status,1);
   assert.equal(existsSync(file+'.lock'),true);
 });
+test('verification leaves the real archive and config untouched', t => {
+  const { cli, home } = setup(t);
+  assert.equal(cli('verify').archiveReopened, true);
+  assert.equal(existsSync(home), false);
+});
+test('installer keeps an unrelated app directory', t => {
+  const { home, run } = setup(t);
+  const app = join(home, 'app');
+  mkdirSync(app, { recursive: true });
+  const marker = join(app, 'my-file');
+  writeFileSync(marker, 'keep');
+  assert.equal(run('bin/install.mjs').status, 1);
+  assert.equal(readFileSync(marker, 'utf8'), 'keep');
+});

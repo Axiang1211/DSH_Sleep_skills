@@ -1,6 +1,6 @@
 {
   "name": "dsh-sleep-skills",
-  "version": "0.1.0-alpha.4",
+  "version": "0.1.0-beta.1",
   "description": "Evidence-linked persistent memory and sleep consolidation for DSH agents. Research preview; no native context-window expansion.",
   "type": "module",
   "main": "src/dsh-plugin.mjs",
@@ -18,7 +18,7 @@
     "test": "node --test",
     "benchmark": "node scripts/benchmark.mjs",
     "bundle": "python3 scripts/bundle.py",
-    "test:dsh": "node scripts/dsh-smoke.mjs",
+    "test:dsh": "node scripts/dsh-smoke.mjs && node scripts/public-plugin.mjs",
     "benchmark:window": "node scripts/window-recall.mjs",
     "test:compaction": "node scripts/compaction-recall.mjs"
   },

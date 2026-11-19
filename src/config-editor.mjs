@@ -12,10 +12,11 @@ export function editConfig(action,args=[],file=configFile()) {
   try{
     const previous=existsSync(file)?readFileSync(file,'utf8'):null;
     const config=validateConfig(previous===null?{}:JSON.parse(previous));
-    if(action==='bind'){
+    if(action==='bind' || action==='activate'){
       if(args.length!==2)throw new Error('Usage: config bind <session-id> <scope>');
       const [session,scope]=args;scopeName(session);scopeName(scope);
       config.sessionScopes={...config.sessionScopes,[session]:scope};
+      if (action === 'activate') config.enabled = true;
     }else if(action==='unbind'){
       if(args.length!==1)throw new Error('Usage: config unbind <session-id>');
       scopeName(args[0]);delete config.sessionScopes[args[0]];

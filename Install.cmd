@@ -6,10 +6,10 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-node bin\install.mjs
+node bin\setup.mjs
 if errorlevel 1 (
   pause
   exit /b 1
 )
-echo Installation complete. Read README for DSH activation.
+echo See README for configuration and verification.
 pause
