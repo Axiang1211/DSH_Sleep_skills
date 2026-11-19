@@ -28,23 +28,25 @@
 
 給 DeepSeek Harness（DSH）與個人代理使用的持久記憶預覽版。採 MIT 授權，可下載、自行安裝與修改。核心不需要 npm 相依套件或 API Key。
 
-> **v0.1.0-alpha.4：研究預覽版。** 這是受 SLEEP 啟發的外部記憶系統，不是論文的權重訓練實作，也不會把模型的原生上下文窗口改成無限大。已用官方 DSH 0.2.2-rc.1 runtime 與腳本模型驗證訊息存檔、工具執行、跨 session 回憶及插件卸載；尚未在真實「大肥魚」帳號、桌面啟動器或真實模型端點驗證。
+> **v0.1.0-beta.1：公開測試版。** 這是受 SLEEP 啟發的外部記憶系統，不是論文的權重訓練實作，也不會把模型的原生上下文窗口改成無限大。已用官方 DSH 0.2.2-rc.1 runtime 與腳本模型驗證訊息存檔、工具執行、跨 session 回憶及插件卸載；另以官方 CLI 啟動測試 profile，在第一個 session 告知隨機六位數代號，重開 DSH 後由另一個 session 的本機 Qwen2.5-0.5B-Instruct 答回。桌面和真實聊天帳號仍待實測。
 
 ## 下載與安裝
 
 1. 安裝 [Node.js 24 LTS](https://nodejs.org/)（核心最低 24.0；DSH 整合需要 24.9 以上）。目前沒有內含 Node 的 exe / dmg。
-2. 從 [Releases](https://github.com/Axiang1211/DSH_Sleep_skills/releases) 下載版本 ZIP，或直接下載 [main 原始碼 ZIP](https://github.com/Axiang1211/DSH_Sleep_skills/archive/refs/heads/main.zip)，解壓縮。
+2. 直接下載 [beta.1 安裝 ZIP](https://github.com/Axiang1211/DSH_Sleep_skills/releases/download/v0.1.0-beta.1/dsh-sleep-skills-0.1.0-beta.1.zip)，或從 [Releases](https://github.com/Axiang1211/DSH_Sleep_skills/releases) 下載版本 ZIP，或直接下載 [main 原始碼 ZIP](https://github.com/Axiang1211/DSH_Sleep_skills/archive/refs/heads/main.zip)，解壓縮。
 3. Windows 雙擊 `Install.cmd`。macOS / Linux 在解壓縮目錄執行：
 
    ```sh
-   node bin/install.mjs
+   node bin/setup.mjs
    ```
 
    macOS 也提供 `Install.command`；若下載權限不允許雙擊，使用上面的命令。
 
 安裝器會安裝到 `~/.dsh-sleep/app`，把 skill 放到 `$DSH_HOME/skills/sleep-memory`（未設變數時為 `~/.dsh/skills/sleep-memory`）。它保留既有資料庫與設定，不替你更改 DSH 帳號或啟用網路傳輸。預設 `enabled: false`。
 
-**安裝完成 ≠ 已接上 DSH。** 完成下方「接入 DSH」後才會自動記錄新訊息。只想試用時，可直接在原始碼目錄執行以下示範。
+安裝精靈會做一次離線驗收。輸入 profile 名稱可直接註冊插件，之後填入私人 session ID 和記憶範圍，確認映射並輸入 `YES`。重新載入 profile 後即可開始記錄。按 Enter 跳過的步驟可依下方「接入 DSH」補做。自動化安裝可用 `node bin/install.mjs`。只想試用時，可直接在原始碼目錄執行以下示範。
+
+已安裝的 CLI 也提供 `verify`。它在暫存目錄建立隨機代號、整理記憶、重開資料庫並查回原文。要驗證自己的模型，先依 [本機設定](examples/config.local-model.json) 或 [API 設定](examples/config.api.json) 填好 `model`，再執行 `node bin/sleep.mjs verify --model`。指令只向指定端點傳送合成證據，檢查回答含有完整代號，失敗時傳回非零狀態。遠端測試會使用一次模型請求。
 
 ## 兩分鐘離線示範
 
@@ -153,11 +155,11 @@ npm run test:compaction
 npm run benchmark:window
 ```
 
-`npm test` 不需要安裝 DSH；`test:dsh` 使用 lockfile 鎖定的官方 runtime 套件與腳本模型，驗證真實事件、工具執行、重載後回憶、scope 隔離及卸載，無需聊天帳號或 API 金鑰。兩組測試都有 Windows／macOS／Linux CI。原有的 `npm run benchmark` 使用合成資料，回報位元組、空白分隔詞數及來源命中；**不是論文的 BABILong、不是經模型 tokenizer 驗證的百萬 token 評測，也不是模型回答正確率**。跨平台 CI 與 tag release workflow 已提供；實際通過結果以 Actions 為準。
+`npm test` 不需要安裝 DSH；`test:dsh` 使用 lockfile 鎖定的官方 runtime 套件與腳本模型，驗證真實事件、工具執行、重載後回憶、scope 隔離及卸載，無需聊天帳號或 API 金鑰。兩組測試都有 Windows／macOS／Linux CI。原有的 `npm run benchmark` 使用合成資料，回報位元組、空白分隔詞數及來源命中；**不是論文的 BABILong、不是經模型 tokenizer 驗證的百萬 token 評測，也不是模型回答正確率**。每份新增的版本說明在 main 的 CI 通過後觸發預覽發行；實際通過結果以 Actions 為準。
 
 **百萬 token 歷史回憶驗收**　從下載的原始碼目錄執行 `npm ci --ignore-scripts` 與 `npm run benchmark:window`。指令會建立暫存資料庫，透過官方 DSH runtime 寫入四筆中英文決定，穿插 1,024 筆帶有相同專案名稱的合成紀錄，再關閉並重開 runtime 和 SQLite。在全新 session 中，腳本檢查送往模型的回憶是否同時含有正確答案片段與原始事件 ID，每題上限 384 UTF-8 bytes。輸出逐題列出命中與位元組數，並檢查另一個 scope 及無命中的查詢。
 
-填充紀錄按 `cl100k_base` 逐筆計數，共 1,063,168 tokens。這是可重跑的參考編碼。DSH 實際用量取決於所選模型。此驗收衡量四個有關鍵字線索的問題在重開後取得的證據，模型使用腳本回覆；真實模型的答題品質仍待實測。
+填充紀錄按 `cl100k_base` 逐筆計數，共 1,063,168 tokens。這是可重跑的參考編碼。DSH 實際用量取決於所選模型。此驗收衡量四個有關鍵字線索的問題在重開後取得的證據，模型使用腳本回覆；真實模型的單題驗收另見上方 `verify --model`。
 
 **同一個 session 壓縮後還記得嗎？**　`npm run test:compaction` 讓官方 DSH 的 token meter 和自動壓縮插件在 8,192-token 測試窗口的 50% 門檻觸發。腳本模型產生省略驗收代號的摘要，再由同一個 agent 接收追問。測試檢查有效對話裡已出現 DSH 壓縮摘要，並驗證送到模型的 512-byte 回憶區塊帶回原始代號與事件 ID。
 

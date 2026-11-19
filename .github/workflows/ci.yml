@@ -46,6 +46,7 @@ jobs:
           python-version: '3.12'
       - run: npm run benchmark
       - run: python3 scripts/bundle.py
+      - run: python3 scripts/check-bundle.py
       - run: npm pack --dry-run
       - uses: actions/upload-artifact@v4
         with:

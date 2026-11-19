@@ -12,6 +12,7 @@ import { loadDshApi } from '../src/dsh-api.mjs';
 const help = `DSH Sleep — persistent evidence, not a larger native context window
 Usage: dsh-sleep <command> [arguments]
   init                              Create disabled config; keep existing config
+  verify [--model]                  Check a temporary archive; optionally query your configured model
   doctor [--dsh]                    Check storage/config; optionally check DSH module APIs
   config bind <session-id> <scope>   Save an exact session mapping (does not enable recording)
   config unbind <session-id>         Remove a mapping; retain stored memory
@@ -33,6 +34,18 @@ async function main(args) {
   const [cmd,scope,...rest]=args;
   if (!cmd || ['help','--help','-h'].includes(cmd)) { console.log(help); return; }
   if (cmd==='install') { const { install }=await import('./install.mjs'); out(install()); return; }
+  if (cmd === 'verify') {
+    if ((scope !== undefined && scope !== '--model') || rest.length) throw new Error('Usage: verify [--model]');
+    let model;
+    if (scope === '--model') {
+      const config = loadConfig();
+      if (!config.model) throw new Error('Set model.baseUrl and model.model in config.json first');
+      model = new ChatCompletionsModel(config.model);
+    }
+    const { verifyInstallation } = await import('../src/verify.mjs');
+    out(await verifyInstallation(model));
+    return;
+  }
   if (cmd==='config') { out(editConfig(scope,rest));return; }
   if (cmd==='init') {
     const file=configFile();mkdirSync(dirname(file),{recursive:true,mode:0o700});

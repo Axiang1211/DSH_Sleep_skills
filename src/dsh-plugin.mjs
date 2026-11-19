@@ -13,7 +13,7 @@ export async function apply(ctx) {
   const config = loadConfig();
   if (!config.enabled) { console.info('[dsh-sleep] Disabled. Run the installer and configure exact session IDs.'); return; }
   const {defineTool,createUserMessage}=await loadDshApi();
-  return bindPlugin(ctx, config, { defineTool, createUserMessage });
+  bindPlugin(ctx, config, { defineTool, createUserMessage });
 }
 
 // Exported seam permits contract tests without a running DSH or any account.

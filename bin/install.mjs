@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { cpSync, existsSync, mkdirSync, writeFileSync, renameSync, rmSync } from 'node:fs';
+import { readFileSync, lstatSync, cpSync, existsSync, mkdirSync, writeFileSync, renameSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
@@ -14,6 +14,13 @@ export function install({source=root,target=join(homeDir(),'app'),skillTarget=jo
   const staging=target+'.staging-'+process.pid,backup=target+'.previous';
   const skillStaging=skillTarget+'.staging-'+process.pid,skillBackup=skillTarget+'.previous';
   const marker=join(skillTarget,'.dsh-sleep-owned');
+  if (existsSync(target)) {
+    const manifest = join(target, 'package.json');
+    if (lstatSync(target).isSymbolicLink() || !existsSync(manifest) ||
+        JSON.parse(readFileSync(manifest, 'utf8')).name !== 'dsh-sleep-skills') {
+      throw new Error('Refusing to replace an unrelated application directory: ' + target);
+    }
+  }
   if(existsSync(skillTarget)&&!existsSync(marker))throw new Error('Existing sleep-memory skill is not owned by this installer');
   if([staging,backup,skillStaging,skillBackup].some(p=>existsSync(p)))throw new Error('Previous install staging/backup exists; inspect it before retrying');
   let moved=false,installed=false,skillMoved=false,skillInstalled=false;

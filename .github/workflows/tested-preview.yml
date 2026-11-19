@@ -1,0 +1,58 @@
+name: Publish tested preview
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  publish:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency: preview-release
+    env:
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Identify a newly added versioned release note
+        id: version
+        run: |
+          tag="v$(node -p "require('./package.json').version")"
+          [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$ ]] || exit 0
+          note="release-notes/$tag.md"
+          if git diff --name-only --diff-filter=A HEAD^ HEAD -- "$note" | grep -Fxq "$note"; then
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.version.outputs.tag != ''
+        with:
+          node-version: '24'
+      - name: Build and exercise the install ZIP
+        if: steps.version.outputs.tag != ''
+        run: |
+          python3 scripts/bundle.py
+          python3 scripts/check-bundle.py
+          npm pack --pack-destination dist
+          (cd dist && sha256sum *.zip *.tgz > SHA256SUMS.txt)
+      - name: Publish tested preview
+        if: steps.version.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists."
+            exit 0
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "Tag already exists without a release; inspect it before publishing." >&2
+            exit 1
+          fi
+          gh release create "$TAG" dist/* --target "$RELEASE_SHA" --prerelease --title "DSH Sleep $TAG" --notes-file "release-notes/$TAG.md"
